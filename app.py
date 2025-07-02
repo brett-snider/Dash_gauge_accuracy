@@ -7,22 +7,29 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import base64
 import io
+import requests
+
+def download_pickle_from_gdrive(file_id):
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+    response = requests.get(url)
+    response.raise_for_status()
+    return pickle.load(io.BytesIO(response.content))
 
 # === Load data ===
-output_dir = Path(r'C:\Users\sniderb\Documents\Stream Flow Prediction\1. Hind Cast Model - National Comparision\results')
-results_path = Path(r"C:\Users\sniderb\Documents\Stream Flow Prediction\1. Hind Cast Model - National Comparision\Model_CaSR_DayMET_ERA5\results\test_results_1.p")
+MERGED_DF_FILE_ID = '15yUqZt8pRJsGbSMrrbzH8Sb2Uuvb6Qic'
+RESULTS_FILE_ID = '19lQfRwfSkouvhMfq9ZLF3Wtxc4Gnfw_Y'
 
-merged_df = pd.read_pickle(output_dir / "merged_df.pkl")  # Save this ahead of time as needed
+# Load the merged DataFrame
+merged_df = download_pickle_from_gdrive(MERGED_DF_FILE_ID)
+
+# Load the results dict
+results = download_pickle_from_gdrive(RESULTS_FILE_ID)
 
 # Add NSE category for discrete map
 merged_df['NSE'] = 'Not Satisfactory: NSE < 0.5'
 merged_df.loc[(merged_df['casr_daymet_era5_NSE'] > 0.5) & (merged_df['casr_daymet_era5_NSE'] <= 0.7),'NSE'] = 'Satisfactory: NSE = 0.5-0.7'
 merged_df.loc[(merged_df['casr_daymet_era5_NSE'] > 0.7) & (merged_df['casr_daymet_era5_NSE'] <= 0.8),'NSE'] = 'Good: NSE = 0.7-0.8'
 merged_df.loc[merged_df['casr_daymet_era5_NSE'] > 0.8,'NSE'] = 'Very Good: NSE > 0.8'
-
-# Load results file
-with open(results_path, 'rb') as f:
-    results = pickle.load(f)
 
 # === Setup Dash App ===
 app = dash.Dash(__name__)
